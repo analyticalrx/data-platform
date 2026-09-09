@@ -30,6 +30,7 @@ Requirements:
 - Maven 3.9+ (or the included Maven wrapper)
 - AWS CLI with access to the Phase 1 SSM instance and Secrets Manager
 - Session Manager plugin
+- `jq` (macOS/Linux only)
 
 ### 1. Retrieve the JWT secret
 
@@ -91,12 +92,22 @@ The tunnel maps `127.0.0.1:5433` to the password-authenticated RDS Proxy.
 
 ### 3. Configure database credentials and run
 
+The password-authenticated database credentials are stored in:
+
+```text
+analytical-rx/phase1/dev/postgres/data-platform-password-rw
+```
+
 On Windows PowerShell (Java 21 must be on `PATH`):
 
 ```powershell
 $env:DB_JDBC_URL = 'jdbc:postgresql://127.0.0.1:5433/analyticalrx?sslmode=require'
-$env:DB_USERNAME = 'analyticalrx_data_platform_password_rw'
-$env:DB_PASSWORD = Read-Host 'Database password'
+$dbSecret = aws secretsmanager get-secret-value `
+  --region us-east-1 `
+  --secret-id analytical-rx/phase1/dev/postgres/data-platform-password-rw `
+  --query SecretString --output text | ConvertFrom-Json
+$env:DB_USERNAME = $dbSecret.username
+$env:DB_PASSWORD = $dbSecret.password
 
 mvn spring-boot:run
 ```
@@ -105,9 +116,12 @@ On macOS/Linux:
 
 ```bash
 export DB_JDBC_URL='jdbc:postgresql://127.0.0.1:5433/analyticalrx?sslmode=require'
-export DB_USERNAME='analyticalrx_data_platform_password_rw'
-read -s DB_PASSWORD
-export DB_PASSWORD
+DB_SECRET_JSON="$(aws secretsmanager get-secret-value \
+  --region us-east-1 \
+  --secret-id analytical-rx/phase1/dev/postgres/data-platform-password-rw \
+  --query SecretString --output text)"
+export DB_USERNAME="$(printf '%s' "$DB_SECRET_JSON" | jq -r .username)"
+export DB_PASSWORD="$(printf '%s' "$DB_SECRET_JSON" | jq -r .password)"
 
 export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
 export PATH="$JAVA_HOME/bin:$PATH"
