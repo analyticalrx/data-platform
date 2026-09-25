@@ -32,6 +32,85 @@ Requirements:
 - Session Manager plugin
 - `jq` (macOS/Linux only)
 
+### Windows Command Prompt setup
+
+Use two Command Prompt windows: Terminal 1 keeps the SSM database tunnel open;
+Terminal 2 retrieves secrets and starts Spring Boot. Do not close Terminal 1
+while the service is running.
+
+#### 1. Create a personal AWS CLI profile
+
+Each developer must configure their own IAM access key and secret access key.
+Do not share access keys or commit them to this repository.
+
+```cmd
+aws configure --profile your-analyticalrx-profile
+```
+
+Enter `us-east-1` as the default Region and `json` as the output format. For
+example, Vishnuvardhan's local profile is `vishnu-analyticalrx`.
+
+Verify the profile before continuing:
+
+```cmd
+set "AWS_PROFILE=your-analyticalrx-profile"
+set "AWS_REGION=us-east-1"
+set "AWS_DEFAULT_REGION=us-east-1"
+set "AWS_PAGER="
+aws sts get-caller-identity --no-cli-pager
+```
+
+The returned account ID must be `209556026827`.
+
+#### 2. Terminal 1: start the SSM database tunnel
+
+```cmd
+set "AWS_PROFILE=your-analyticalrx-profile"
+set "AWS_REGION=us-east-1"
+set "AWS_DEFAULT_REGION=us-east-1"
+set "AWS_PAGER="
+
+aws ssm start-session --region us-east-1 --target i-0ee64eae7d8505bfc --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters host=analytical-rx-phase1-rds-proxy.proxy-c6ry4mqo6ydb.us-east-1.rds.amazonaws.com,portNumber=5432,localPortNumber=5433
+```
+
+The tunnel maps `127.0.0.1:5433` to the RDS Proxy. It requires the AWS Session
+Manager plugin to be installed locally.
+
+#### 3. Terminal 2: retrieve secrets and run the service
+
+```cmd
+cd C:\path\to\data-platform
+
+set "AWS_PROFILE=your-analyticalrx-profile"
+set "AWS_REGION=us-east-1"
+set "AWS_DEFAULT_REGION=us-east-1"
+set "AWS_PAGER="
+
+set "DB_JDBC_URL=jdbc:postgresql://127.0.0.1:5433/analyticalrx?sslmode=require"
+
+for /f "delims=" %A in ('aws secretsmanager get-secret-value --region us-east-1 --secret-id analytical-rx/phase1/dev/postgres/data-platform-password-rw --query SecretString --output text --no-cli-pager') do set "DB_SECRET_JSON=%A"
+for /f "delims=" %A in ('powershell -NoProfile -Command "$s = ConvertFrom-Json -InputObject $env:DB_SECRET_JSON; [Console]::Write($s.username)"') do set "DB_USERNAME=%A"
+for /f "delims=" %A in ('powershell -NoProfile -Command "$s = ConvertFrom-Json -InputObject $env:DB_SECRET_JSON; [Console]::Write($s.password)"') do set "DB_PASSWORD=%A"
+set "DB_SECRET_JSON="
+
+for /f "delims=" %A in ('aws secretsmanager get-secret-value --region us-east-1 --secret-id analytical-rx/phase1/dev/jwt-signing-secret --query SecretString --output text --no-cli-pager') do set "JWT_SIGNING_SECRET=%A"
+
+set "JWT_ACCESS_TOKEN_TTL_MS=1800000"
+set "JWT_ISSUER=analyticalrx-api"
+set "JWT_AUDIENCE=analyticalrx-frontend"
+
+if defined DB_USERNAME (echo DB username loaded) else (echo DB username NOT loaded)
+if defined DB_PASSWORD (echo DB password loaded) else (echo DB password NOT loaded)
+if defined JWT_SIGNING_SECRET (echo JWT secret loaded) else (echo JWT secret NOT loaded)
+
+.\mvnw.cmd spring-boot:run
+```
+
+Values set with `set` exist only in the current Command Prompt window. The
+`for /f` commands use `%A` because they are pasted into Command Prompt; use
+`%%A` if placing the same commands in a `.cmd` file. Do not print or commit
+`DB_PASSWORD`, `JWT_SIGNING_SECRET`, or `DB_SECRET_JSON`.
+
 ### 1. Retrieve the JWT secret
 
 The JWT signing secret is stored in AWS Secrets Manager under:
