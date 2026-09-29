@@ -1,17 +1,20 @@
 package com.analyticalrx.dataplatform.auth.service;
 
+import java.time.Instant;
+import java.util.Date;
+import java.util.UUID;
+
+import javax.crypto.SecretKey;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import com.analyticalrx.dataplatform.auth.model.PlatformUserDetails;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
-import javax.crypto.SecretKey;
-import java.time.Instant;
-import java.util.Date;
-import java.util.UUID;
-import com.analyticalrx.dataplatform.auth.model.PlatformUserDetails;
 
 @Service
 public class JwtService {
@@ -35,7 +38,7 @@ public class JwtService {
         return Jwts.builder().subject(Long.toString(user.id()))
                 .issuer(issuer).audience().add(audience).and()
                 .claim("email", user.email()).claim("display_name", user.displayName())
-                .claim("tenant_id", user.tenantId().toString()).claim("roles", user.roles())
+                .claim("tenant_id", user.tenantId()).claim("roles", user.roles())
                 .claim("permissions_version", user.permissionsVersion())
                 .issuedAt(Date.from(now)).expiration(new Date(now.toEpochMilli() + expirationMillis))
                 .id(UUID.randomUUID().toString()).signWith(signingKey).compact();

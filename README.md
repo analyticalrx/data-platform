@@ -16,6 +16,7 @@ Start with:
 
 - [Data Platform Service Design](docs/data-platform-service-design.md)
 - [Spring Boot Data Platform Progress Tracker](docs/spring-boot-data-platform-progress.md)
+- [Applied bigint ID migration](database/bigint-id-migration-plan.md)
 
 Product requirements, API contracts, database design, and RBAC standards remain
 in the private
@@ -31,6 +32,30 @@ Requirements:
 - AWS CLI with access to the Phase 1 SSM instance and Secrets Manager
 - Session Manager plugin
 - `jq` (macOS/Linux only)
+
+### Debug in VS Code (macOS/Linux)
+
+The Spring Boot Dashboard/Java debugger starts a new process; it does not read
+variables exported in a separate terminal. Its launch configuration uses the
+repository-root `.env` file, which is Git-ignored.
+
+1. Start the SSM database tunnel in a terminal and keep it open. The command is
+   in [Start the SSM database tunnel](#2-start-the-ssm-database-tunnel).
+2. In the repository root, run `AWS_PROFILE=your-analyticalrx-profile bash scripts/setup-vscode-env.sh`.
+   The script checks the AWS account and retrieves the database and JWT secrets
+   into `.env` with owner-only permissions. If you use environment credentials
+   rather than a named profile, omit `AWS_PROFILE=...`. It will not overwrite an
+   existing `.env`.
+3. In VS Code, open this repository as the workspace. Select
+   `Spring Boot-DataplatformApplication<dataplatform>` in **Run and Debug** and
+   press F5, or debug the same project from Spring Boot Dashboard. Set a
+   breakpoint in `AuthController.login` and send a login request.
+
+If the launch configuration is absent, add a Java launch configuration with
+`"mainClass": "com.analyticalrx.dataplatform.DataplatformApplication"` and
+`"envFile": "${workspaceFolder}/.env"`. `DB_JDBC_URL` uses local port 5433, so
+the SSM tunnel must still be running. Never commit `.env` or paste its secrets
+into `launch.json`.
 
 ### Windows Command Prompt setup
 

@@ -6,10 +6,10 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.analyticalrx.dataplatform.auth.model.LoginRequest;
 import com.analyticalrx.dataplatform.auth.model.LoginResponse;
 import com.analyticalrx.dataplatform.auth.model.PlatformUserDetails;
+import com.analyticalrx.dataplatform.auth.repository.AuthUserRepository;
 import com.analyticalrx.dataplatform.auth.service.JwtService;
 
 import jakarta.validation.Valid;
@@ -26,24 +27,39 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/v1/auth")
 public class AuthController {
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
-    private final AuthenticationManager authenticationManager;
     private final JwtService jwt;
-    public AuthController(AuthenticationManager authenticationManager, JwtService jwt) {
-        this.authenticationManager = authenticationManager; this.jwt = jwt;
+    private final AuthUserRepository authUserRepository;
+    private final PasswordEncoder passwordEncoder;
+    public AuthController(JwtService jwt, AuthUserRepository authUserRepository, PasswordEncoder passwordEncoder) {
+        this.jwt = jwt;
+        this.authUserRepository = authUserRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
-        System.out.println("Login request received for email: " + request.email());
         try {
-            var authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.email(), request.password()));
-            var user = (PlatformUserDetails) authentication.getPrincipal();
+            var userOpt = authUserRepository.findByTenantKeyAndEmail(request.tenantKey(), request.email());
+            if (userOpt.isEmpty()) {
+                throw new BadCredentialsException("Invalid credentials");
+            }
+
+            var user = userOpt.get();
+
+            var passwordMatch = passwordEncoder.matches(request.password(), user.getPassword());
+
+            if (!passwordMatch){
+                throw new BadCredentialsException("Invalid credentials");
+            }
+
+            if (user.roles().isEmpty()) {
+                throw new BadCredentialsException("Invalid credentials");
+            }
             var issuedAt = Instant.now();
             return ResponseEntity.ok(new LoginResponse(jwt.issue(user), "Bearer", 1800, issuedAt,
                     new LoginResponse.UserSummary(user.id(), user.email(), user.displayName(), user.status())));
         } catch (AuthenticationException ex) {
-            log.warn("Authentication failed: email={}, reason={}", request.email(), ex.getClass().getSimpleName());
+            log.warn("Authentication failed: reason={}", ex.getClass().getSimpleName());
             return ResponseEntity.status(401).body(Map.of(
                     "error", "invalid_credentials",
                     "message", "Invalid email or password"));

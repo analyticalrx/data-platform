@@ -1,15 +1,14 @@
 package com.analyticalrx.dataplatform.auth.model;
 
+import java.util.Collection;
+import java.util.Set;
+
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.Collection;
-import java.util.Set;
-import java.util.UUID;
-
 public record PlatformUserDetails(
         long id,
-        UUID tenantId,
+        long tenantId,
         String email,
         String displayName,
         String passwordHash,

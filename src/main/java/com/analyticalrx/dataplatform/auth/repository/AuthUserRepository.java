@@ -1,12 +1,12 @@
 package com.analyticalrx.dataplatform.auth.repository;
 
+import java.util.LinkedHashSet;
+import java.util.Optional;
+
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Repository;
 
-import java.util.LinkedHashSet;
-import java.util.Optional;
-import java.util.UUID;
 import com.analyticalrx.dataplatform.auth.model.PlatformUserDetails;
 
 @Repository
@@ -15,12 +15,8 @@ public class AuthUserRepository {
 
     public AuthUserRepository(JdbcTemplate jdbc) { this.jdbc = jdbc; }
 
-    public Optional<PlatformUserDetails> findByEmail(String email) {
-        return find(" lower(u.email) = lower(?)", email);
-    }
-
     public Optional<PlatformUserDetails> findById(long id) {
-        return find("u.id = ?", id);
+        return find(" u.id = ?", id);
     }
 
     private Optional<PlatformUserDetails> find(String predicate, Object value) {
@@ -32,7 +28,7 @@ public class AuthUserRepository {
                 left join control_plane.role_definition r on r.id = ur.role_id and r.status = 'active'
                 left join control_plane.role_permission rp on rp.role_id = r.id
                 left join control_plane.permission_definition p on p.id = rp.permission_id and p.status = 'active'
-                where """ + predicate;
+                where""" + predicate;
         var rows = jdbc.queryForList(sql, value);
         if (rows.isEmpty()) return Optional.empty();
         var first = rows.getFirst();
@@ -45,12 +41,26 @@ public class AuthUserRepository {
         var authorities = permissions.stream().map(SimpleGrantedAuthority::new).toList();
         return Optional.of(new PlatformUserDetails(
                 ((Number) first.get("id")).longValue(),
-                (UUID) first.get("tenant_id"),
+                (Long) first.get("tenant_id"),
                 (String) first.get("email"),
                 (String) first.get("display_name"),
                 (String) first.get("password_hash"),
                 (String) first.get("status"),
                 ((Number) first.get("permissions_version")).intValue(),
                 roles, permissions, authorities));
+    }
+
+    public Optional<PlatformUserDetails> findByTenantKeyAndEmail(String tenantKey, String email){
+        String sql = """
+                select t.id as tenant_id, t.tenant_key, u.id as user_id, u.email, u.display_name, u.password_hash, u.permissions_version
+                from control_plane.tenant_registry t
+                join control_plane.app_user u on u.tenant_id = t.id
+                where t.tenant_key = ? and lower(u.email) = lower(?) and t.status = 'active' and u.status = 'active'
+                """;
+        var rows = jdbc.queryForList(sql, tenantKey, email);
+        if (rows.isEmpty()) return Optional.empty();
+        var result = rows.getFirst();
+        var userId = ((Number) result.get("user_id")).longValue();
+        return findById(userId);
     }
 }
