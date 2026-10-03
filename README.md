@@ -240,5 +240,21 @@ The service starts on `http://127.0.0.1:8080`.
 ```bash
 curl -i -X POST http://127.0.0.1:8080/api/v1/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"email":"owner@analyticalrx.dev","password":"Owner@123"}'
+  -d '{"tenantKey":"<tenant-key>","email":"<user-email>","password":"<password>"}'
 ```
+
+### 5. Test pharmacy access
+
+Use the bearer token returned by login and a `pharmacy_key` from the tenant's
+`pharmacy` table:
+
+```bash
+curl -i http://127.0.0.1:8080/api/v1/pharmacies/<pharmacy-key> \
+  -H 'Authorization: Bearer <access-token>'
+```
+
+`OWNER` can read an active pharmacy in their tenant. `PHARMACIST` and
+`TECHNICIAN` need an active `control_plane.user_pharmacy_access` assignment for
+that key. Other roles and unassigned staff are denied; a missing or inactive
+pharmacy returns 404 after the access check. The endpoint returns pharmacy
+metadata, not raw webhook or patient data.
