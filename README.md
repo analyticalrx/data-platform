@@ -245,16 +245,25 @@ curl -i -X POST http://127.0.0.1:8080/api/v1/auth/login \
 
 ### 5. Test pharmacy access
 
-Use the bearer token returned by login and a `pharmacy_key` from the tenant's
-`pharmacy` table:
+Use the bearer token returned by login to list active pharmacies within the
+user's scope, then fetch one by its `pharmacy_key`:
 
 ```bash
+curl -i http://127.0.0.1:8080/api/v1/pharmacies \
+  -H 'Authorization: Bearer <access-token>'
+
 curl -i http://127.0.0.1:8080/api/v1/pharmacies/<pharmacy-key> \
   -H 'Authorization: Bearer <access-token>'
 ```
 
-`OWNER` can read an active pharmacy in their tenant. `PHARMACIST` and
-`TECHNICIAN` need an active `control_plane.user_pharmacy_access` assignment for
-that key. Other roles and unassigned staff are denied; a missing or inactive
-pharmacy returns 404 after the access check. The endpoint returns pharmacy
-metadata, not raw webhook or patient data.
+`OWNER` and `TENANT_ADMIN` see all active pharmacies in their tenant. Other
+roles, including `STORE_MANAGER`, `BOOKKEEPER`, `PHARMACIST`, and `TECHNICIAN`,
+see only active pharmacies assigned through `control_plane.user_pharmacy_access`.
+`GET /api/v1/me` returns the same effective pharmacy keys. An unassigned
+pharmacy returns 403 on the single-pharmacy endpoint; a missing or inactive
+pharmacy returns 404 after the scope check. The list endpoint returns an empty
+array when no active pharmacies are in scope.
+
+These endpoints return pharmacy metadata only. Pharmacy scope does not grant
+access to operational, financial, or patient data: each future dashboard or
+workflow API must also check the caller's permission for that content.
