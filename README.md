@@ -20,18 +20,12 @@ Start with:
 
 ## UI API contracts
 
-Give the UI engineer the [UI API Contracts draft](https://github.com/analyticalrx/analytical-rx-documentation/blob/main/architecture/ui-api-contracts.md)
-for the planned Phase 1 dashboards, screen data, and sample responses. It is a
-design draft, not a list of currently available APIs. In particular, some
-routes, ID types, and error shapes in that draft do not yet match this service.
-
-For integration against the running backend, use the implemented endpoints in
-this README: [login](#4-test-login), [current user and pharmacies](#5-test-pharmacy-access),
-and [tasks](#6-task-management). Authenticate with
-`Authorization: Bearer <accessToken>`; JSON fields are `camelCase`. Current
-database-backed IDs are numeric (`long`), not UUID strings. Do not build
-dashboard calls from the draft until their backend contracts are implemented
-and reviewed together.
+Give the UI engineer [Implemented UI API Contract](docs/ui-api-contract.md) as
+the source of truth for routes, request/response shapes, and access rules they
+can integrate today. The [broader UI API Contracts draft](https://github.com/analyticalrx/analytical-rx-documentation/blob/main/architecture/ui-api-contracts.md)
+covers planned Phase 1 dashboards, screen data, and sample responses. It is a
+design draft, not a list of currently available APIs; some routes, ID types,
+and error shapes there do not yet match this service.
 
 Product requirements, database design, and RBAC standards remain in the private
 [`analytical-rx-documentation`](https://github.com/analyticalrx/analytical-rx-documentation)
