@@ -18,8 +18,22 @@ Start with:
 - [Spring Boot Data Platform Progress Tracker](docs/spring-boot-data-platform-progress.md)
 - [Applied bigint ID migration](database/bigint-id-migration-plan.md)
 
-Product requirements, API contracts, database design, and RBAC standards remain
-in the private
+## UI API contracts
+
+Give the UI engineer the [UI API Contracts draft](https://github.com/analyticalrx/analytical-rx-documentation/blob/main/architecture/ui-api-contracts.md)
+for the planned Phase 1 dashboards, screen data, and sample responses. It is a
+design draft, not a list of currently available APIs. In particular, some
+routes, ID types, and error shapes in that draft do not yet match this service.
+
+For integration against the running backend, use the implemented endpoints in
+this README: [login](#4-test-login), [current user and pharmacies](#5-test-pharmacy-access),
+and [tasks](#6-task-management). Authenticate with
+`Authorization: Bearer <accessToken>`; JSON fields are `camelCase`. Current
+database-backed IDs are numeric (`long`), not UUID strings. Do not build
+dashboard calls from the draft until their backend contracts are implemented
+and reviewed together.
+
+Product requirements, database design, and RBAC standards remain in the private
 [`analytical-rx-documentation`](https://github.com/analyticalrx/analytical-rx-documentation)
 repository.
 
@@ -267,3 +281,35 @@ array when no active pharmacies are in scope.
 These endpoints return pharmacy metadata only. Pharmacy scope does not grant
 access to operational, financial, or patient data: each future dashboard or
 workflow API must also check the caller's permission for that content.
+
+### 6. Task management
+
+Apply `database/manual-migrations/2026-10-03-task-management.sql` as a database
+admin before using task APIs. This migration targets the dev tenant schema and
+grants the data-platform database role access to the new tables. Apply the same
+table design and role grants to each new tenant schema during onboarding.
+
+Tasks belong to one tenant and pharmacy and require an assignee who can access
+that pharmacy. `OWNER`, `STORE_MANAGER`, `PHARMACIST`, `BOOKKEEPER`, and
+`BUSINESS_DEVELOPMENT` can create tasks. Assignees and managers can change task
+status; `TECHNICIAN` can update assigned tasks but cannot create them.
+`TENANT_ADMIN` has no task-content permission. Owners see all tasks in their
+tenant; store managers see tasks in their assigned pharmacies; other roles see
+tasks they created or that are assigned to them in an assigned pharmacy.
+Closed tasks remain available for audit and cannot be reopened in this release.
+
+The first release exposes:
+
+```text
+POST  /api/v1/tasks
+GET   /api/v1/tasks?pharmacyKey=PHARM-001&status=TODO
+GET   /api/v1/tasks/{id}
+PATCH /api/v1/tasks/{id}/status
+POST  /api/v1/tasks/{id}/comments
+GET   /api/v1/tasks/{id}/comments
+```
+
+Example create body: `{"pharmacyKey":"PHARM-001","title":"Prepare refill queue","assigneeUserId":5,"priority":"HIGH"}`.
+Example status body: `{"status":"IN_PROGRESS"}`. Hard deletion is intentionally
+not exposed; creation, status changes, and comments are recorded in
+`task_activity`.
