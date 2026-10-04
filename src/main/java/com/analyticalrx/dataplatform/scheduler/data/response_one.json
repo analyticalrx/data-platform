@@ -1,0 +1,123 @@
+{
+  "payload": {
+    "TotalRxAmount": 244,
+    "PrimaryInsurancePaid": 202,
+    "QtyOrdered": 64,
+    "FollowupTag": "CALLBACK",
+    "RefillNo": 1,
+    "PatientCopay": 42,
+    "SecondaryInsurancePaid": 0,
+    "DateOrdered": "10/03/2026 12:45:46 PM",
+    "AuthRefills": 4,
+    "PharmVerificationDone": "Y",
+    "EPrescriptionData": {
+      "SenderSoftwareProductName": null,
+      "PrescriberOrderReferenceNumber": "",
+      "PrescriberClinicName": "",
+      "MessageID": ""
+    },
+    "CopayPaid": "Y",
+    "Prescriber": {
+      "MobileNo": "",
+      "Email": "",
+      "Address": {
+        "State": "TX",
+        "ZipCode": "75001",
+        "City": "Test City",
+        "StreetLine2": "",
+        "StreetLine1": "1 Synthetic Prescriber Way"
+      },
+      "FirstName": "Demo",
+      "PresNo": "TEST-PRESCRIBER-002",
+      "DEARegNo": "FT0000002",
+      "LicenseNo": "",
+      "Phone2": "",
+      "Phone": "555-0302",
+      "FaxNo": "",
+      "MedicaidProvNo": "",
+      "NPINo": "1800000002",
+      "LastName": "PrescriberTwo"
+    },
+    "DaysSupply": 14,
+    "PickedUp": "Y",
+    "QtyDispensed": 64,
+    "QtyRemaining": 128,
+    "TimePicked": "12:45:46 PM",
+    "Diagnosis": [
+      {
+        "Description": "Type 2 diabetes mellitus",
+        "Code": "E11.9"
+      }
+    ],
+    "QueueName": "Will Call",
+    "RxNo": 8000021,
+    "Status": "Workflow",
+    "BillType": "Insurance",
+    "Drug": {
+      "LotNo": "LOT-000021",
+      "ExpiryDate": "10/04/2027 12:45:46 PM",
+      "ManufacturerName": "Safecor Health LLC",
+      "Form": "TABLET, FILM COATED",
+      "DrugName": "Trifluoperazine Hydrochloride",
+      "Class": "0",
+      "NDC": "48433-141",
+      "SpecificProductID": 100021,
+      "Strong": "",
+      "StrengthUM": "",
+      "Strength": ""
+    },
+    "DeliveryMethod": "Not Specified",
+    "DatePicked": "09/27/2026 12:45:46 PM",
+    "Patient": {
+      "MobileNo": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "Email": "9eca9b68f0a16e84152327f7bf5f5604b72ebaa0450c2c5eca39b8b7e76c8ceb",
+      "Category": "dc937b59892604f5a86ac96936cd7ff09e25f18ae6b758e8014a24c7fa039e91",
+      "Address": {
+        "State": "536939ed0e78c5b5d2ee7e26767bbad66290547f9fa1fc6602a1aa95cc61b959",
+        "ZipCode": "aa5093aa5fdcf1df43f9380750c9794a3f306c5d5755df346c5fadc75bcb2218",
+        "City": "b4dd2ec43c35144116c895290d00c137c96ecf49330215a7243ea6a9d5fbb21a",
+        "StreetLine2": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "StreetLine1": "83428e93fbe0173356bafe9676d6053091f5d4bc861efd8b66b70276a551462c"
+      },
+      "WorkPhone": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "FirstName": "a3f260b730ceaef2e7b69c919175bf1ea432c19a068f5b10a4d267533913331b",
+      "DriverLicenseNumber": "0eb6892fe8cd4e2498f82f2705ddf08c80c92dc394e6e024182a3367f167b961",
+      "ExternalId": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "MiddleInitials": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "Gender": "08f271887ce94707da822d5263bae19d5519cb3614e0daedc4c7ce5dab7473f1",
+      "PatientNo": "814e523385ab17aee75b465d78e54c59ae877a54e5a52b5b1e8635453fc99e14",
+      "Language": "ba118bf7fc9c1aedc1edb28a0aa86e0b43b681f222af6616e13c43be87815b06",
+      "DOB": "89b8dc6476a146170075ffc4a9da21074dfda0eaaed41e48cebe1d607aaaa28c",
+      "Phone": "e54d4992a5d114370b75e66106c2ad206e26d3c34005e3e7238cba5a248f961f",
+      "DriverLicenseExpiry": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "LastName": "a303038b341df2c81016ecefd91c8ee9f9f2ecbfeeaae917d040aaa5476c0f3a"
+    },
+    "RxPayRecords": [],
+    "DateFilled": "10/04/2026 12:45:46 PM",
+    "RxOriginCode": "1",
+    "TertiaryInsurancePaid": 0,
+    "LabelPrinted": "Y",
+    "Sig": "TAKE ONE TABLET BY MOUTH DAILY AS DIRECTED",
+    "RxOriginDescription": "Electronic",
+    "Pharmacy": {
+      "PharmacyId": "PHARM-001",
+      "Zip": "75001",
+      "NPI": "1900000001",
+      "Phone": "555-0201",
+      "State": "TX",
+      "Address1": "100 Test Pharmacy Way",
+      "City": "Testville",
+      "NCPDP": "9000001",
+      "Name": "AnalyticalRx Test Pharmacy 001"
+    },
+    "Event": "WorkflowTransition",
+    "PrescriptionNotes": "Synthetic simulator note. Not real patient data."
+  },
+  "meta": {
+    "processingStatus": "Received",
+    "requestId": "46b474ba-d871-449d-944e-5d91977bfecc",
+    "eventType": "WorkflowTransition",
+    "source": "PrimeRx",
+    "receivedAt": "2026-10-04T07:15:46.851299487Z"
+  }
+}

@@ -1,0 +1,64 @@
+spring:
+  application:
+    name: dataplatform
+
+  # Local development uses the SSM tunnel on localhost:5433.
+  # Deployed profiles should provide these values from the
+  # database secret/configuration provider.
+  datasource:
+    url: "${DB_JDBC_URL:jdbc:postgresql://127.0.0.1:5433/analyticalrx?sslmode=require}"
+    username: "${DB_USERNAME:analyticalrx_data_platform_password_rw}"
+    password: "${DB_PASSWORD:}"
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+
+  task:
+    scheduling:
+      shutdown:
+        await-termination: true
+        await-termination-period: 60s
+
+app:
+  jwt:
+    secret: "${JWT_SIGNING_SECRET}"
+    expiration-ms: "${JWT_ACCESS_TOKEN_TTL_MS:1800000}"
+    issuer: "${JWT_ISSUER:analyticalrx-api}"
+    audience: "${JWT_AUDIENCE:analyticalrx-frontend}"
+
+  sqs:
+    queue-url: "${SQS_QUEUE_URL}"
+
+    # Wait after one complete batch job before next execution
+    poll-interval-ms: 90000
+
+    # Maximum messages handled by one EC2 during one scheduled run
+    max-messages-per-run: 100
+
+    # SQS maximum = 10 messages per ReceiveMessage request
+    receive-batch-size: 10
+
+    # Small long poll even though we're batch processing
+    receive-wait-seconds: 4
+
+    # Message initially hidden for 2 minutes
+    visibility-timeout-seconds: 180
+
+    # Renew visibility while message is still processing
+    visibility-heartbeat-seconds: 90
+
+    # Limit DB/downstream pressure per EC2
+    processing-concurrency: 5
+
+    # Prevent one scheduled run from draining forever
+    max-run-duration: 45s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info
