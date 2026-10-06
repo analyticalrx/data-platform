@@ -166,9 +166,129 @@ Body: `{"commentText":"Items verified"}` (max 2000 characters). Returns `201`:
 Returns a bare array of comments in chronological order. The task must be
 visible to the caller. Hard task deletion is not available in this release.
 
+## Starter dashboards
+
+These endpoints require the existing dashboard permission as well as the
+authenticated user's pharmacy scope. The tenant comes from the bearer token;
+there is no client-supplied tenant ID or schema name.
+
+| Endpoint | Required permission | Scope |
+| --- | --- | --- |
+| `GET /dashboards/owner` | `dashboard.owner.read` | Active pharmacies in the tenant |
+| `GET /dashboards/store-manager` | `dashboard.store_manager.read` | Explicitly assigned active pharmacies |
+
+Both accept optional `startDate` and `endDate` (`YYYY-MM-DD`, inclusive) and
+`pharmacyKey`. With no dates, the range is the latest 30 days including the
+current UTC date. Explicit dates are recommended for pharmacy-local reporting
+until pharmacy time zones are configured.
+The maximum range is 366 days. A selected pharmacy outside the caller's scope
+returns `404`; an invalid range returns `400`.
+
+```text
+GET /api/v1/dashboards/owner?startDate=2026-10-01&endDate=2026-10-05
+GET /api/v1/dashboards/store-manager?pharmacyKey=PHARM-001
+```
+
+The response has the same shape for both roles:
+
+No-data example (reflects current dev data availability; store list shortened):
+
+```json
+{
+  "dashboardId": "owner",
+  "generatedAt": "2026-10-05T12:00:00Z",
+  "filters": {"startDate":"2026-10-01","endDate":"2026-10-05","pharmacyKey":null},
+  "dataStatus": "NO_DATA",
+  "latestBusinessDate": null,
+  "latestImportedAt": null,
+  "totals": {
+    "eventCount": null,
+    "billedEventCount": null,
+    "rejectedEventCount": null,
+    "reversedEventCount": null,
+    "openTaskCount": 2,
+    "overdueTaskCount": 0
+  },
+  "stores": [{
+    "pharmacyKey": "PHARM-001", "displayName": "Demo Pharmacy",
+    "dataStatus": "NO_DATA",
+    "metrics": {
+      "eventCount": null, "billedEventCount": null,
+      "rejectedEventCount": null, "reversedEventCount": null,
+      "openTaskCount": 2, "overdueTaskCount": 0
+    }
+  }],
+  "trend": []
+}
+```
+
+Illustrative response **after events are available** (synthetic numbers, not
+live pharmacy data):
+
+```json
+{
+  "dashboardId": "owner",
+  "generatedAt": "2026-10-05T16:00:00Z",
+  "filters": {"startDate":"2026-10-03","endDate":"2026-10-05","pharmacyKey":null},
+  "dataStatus": "AVAILABLE",
+  "latestBusinessDate": "2026-10-05",
+  "latestImportedAt": "2026-10-05T15:40:00Z",
+  "totals": {
+    "eventCount": 12, "billedEventCount": 4,
+    "rejectedEventCount": 2, "reversedEventCount": 1,
+    "openTaskCount": 3, "overdueTaskCount": 1
+  },
+  "stores": [
+    {
+      "pharmacyKey": "PHARM-001", "displayName": "Demo Pharmacy 001",
+      "dataStatus": "AVAILABLE",
+      "metrics": {
+        "eventCount": 8, "billedEventCount": 3,
+        "rejectedEventCount": 1, "reversedEventCount": 1,
+        "openTaskCount": 2, "overdueTaskCount": 1
+      }
+    },
+    {
+      "pharmacyKey": "PHARM-002", "displayName": "Demo Pharmacy 002",
+      "dataStatus": "AVAILABLE",
+      "metrics": {
+        "eventCount": 4, "billedEventCount": 1,
+        "rejectedEventCount": 1, "reversedEventCount": 0,
+        "openTaskCount": 1, "overdueTaskCount": 0
+      }
+    }
+  ],
+  "trend": [
+    {"date":"2026-10-03","eventCount":3},
+    {"date":"2026-10-04","eventCount":4},
+    {"date":"2026-10-05","eventCount":5}
+  ]
+}
+```
+
+UI placement: `totals` supplies summary cards, `stores` supplies the comparison
+table, and `trend` supplies a daily event-activity chart. Show `dataStatus`
+and freshness next to those views. A store-manager response has the same shape
+with `dashboardId: "store-manager"` and only assigned pharmacies; a selected
+`pharmacyKey` narrows `stores`, `totals`, and `trend` to that store. Do not
+derive prescription counts or money values from these event counts.
+
+`dataStatus` is `NO_DATA`, `PARTIAL`, or `AVAILABLE`. `PARTIAL` means at least
+one included pharmacy has no event data in the period or some events have a
+non-`valid` data-quality status. Task counts are independent of event-data
+availability. Activity fields are `null` when no usable period data exists,
+not zero. `trend` contains `{date, eventCount}` points for dates with events.
+
+**These are event counts, not unique prescription counts.** A fill can produce
+several webhook events. `billedEventCount` is not revenue or cash collected;
+it counts `claim_billed` events. Rejection and reversal counts likewise count
+their event types. The response does not yet contain billed amount, gross
+profit, net profit, patient metrics, or payer/drug profitability. Those need
+validated fill-level and financial rules before publication.
+
 ## Not implemented yet
 
-Dashboard, tenant admin, internal admin, automation, reporting, and task
+Remaining role dashboards, tenant admin, internal admin, automation, reporting, and task
 assignee lookup endpoints in the broader draft are planned contracts, not
 deployable APIs. Task creation currently needs a known `assigneeUserId`; the UI
 cannot yet populate a picker from this service. Align each new route with the
