@@ -50,10 +50,7 @@ public class SqsMessageProcessor {
              * processed this event.
              */
 
-            log.info(
-                    "Duplicate event ignored. eventId={}",
-                    event.eventId()
-            );
+            log.info("Duplicate event ignored. eventId={}", event.eventId());
 
             return;
         }
