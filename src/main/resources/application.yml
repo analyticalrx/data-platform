@@ -55,6 +55,9 @@ app:
     # Prevent one scheduled run from draining forever
     max-run-duration: 45s
 
+    # SQS Queues Hosted Region
+    region: ${AWS_REGION:us-east-1}
+
 management:
   endpoints:
     web:
