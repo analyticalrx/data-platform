@@ -1,5 +1,7 @@
 package com.analyticalrx.dataplatform.scheduler.service;
 
+import com.analyticalrx.dataplatform.scheduler.dto.TenantRegistryDto;
+
 public interface TenantSchemaResolver {
-    String resolveSchema(String tenantKey);
+    TenantRegistryDto resolveSchema(String tenantKey);
 }

@@ -1,7 +1,8 @@
-package com.analyticalrx.dataplatform.scheduler.service;
+package com.analyticalrx.dataplatform.scheduler.service.batch;
 
 import com.analyticalrx.dataplatform.scheduler.config.SqsBatchProperties;
 import com.analyticalrx.dataplatform.scheduler.pojo.ProcessingResult;
+import com.analyticalrx.dataplatform.scheduler.service.impl.SqsMessageProcessorImpl;
 import com.analyticalrx.dataplatform.scheduler.utils.VisibilityExtender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +26,7 @@ public class SqsBatchScheduler {
 
     private final SqsClient sqsClient;
     private final SqsBatchProperties properties;
-    private final SqsMessageProcessor messageProcessor;
+    private final SqsMessageProcessorImpl messageProcessor;
     private final VisibilityExtender visibilityExtender;
     @Qualifier("sqsProcessingExecutor")
     private final TaskExecutor taskExecutor;

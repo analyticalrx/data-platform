@@ -24,7 +24,7 @@ public class JsonNodeProcessor {
 
         if (Objects.isNull(parent) || parent.isNull()) return null;
 
-        JsonNode node = parent.get(fieldName);
+        JsonNode node = parent.path(fieldName);
 
         if (Objects.isNull(node) || node.isNull()) return null;
 
