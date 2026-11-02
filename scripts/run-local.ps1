@@ -30,4 +30,10 @@ $env:JWT_ISSUER = "analyticalrx-api"
 $env:JWT_AUDIENCE = "analyticalrx-frontend"
 
 Write-Host "Starting the backend. Keep the database tunnel open in its other window."
-& .\mvnw.cmd spring-boot:run
+if (Test-Path ".\.mvn\wrapper\maven-wrapper.properties") {
+  & .\mvnw.cmd spring-boot:run
+} elseif (Get-Command mvn -ErrorAction SilentlyContinue) {
+  & mvn spring-boot:run
+} else {
+  throw "Maven is required because this checkout has no Maven wrapper configuration. Install Maven, reopen the terminal, and retry."
+}
