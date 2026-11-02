@@ -7,16 +7,21 @@ Technology and scope:
 
 - Java 21
 - Spring Boot 3.5.16
-- PostgreSQL through RDS Proxy
+- Private PostgreSQL through an SSM tunnel for local development
 - JWT bearer authentication
 - tenant/pharmacy role-based access control
 - Phase 1 starter dashboard APIs
 
 Start with:
 
-- [Data Platform Service Design](docs/data-platform-service-design.md)
-- [Spring Boot Data Platform Progress Tracker](docs/spring-boot-data-platform-progress.md)
-- [Applied bigint ID migration](database/bigint-id-migration-plan.md)
+- [Run locally](#local-setup) for environment setup and startup commands.
+- [Implemented UI API contract](docs/ui-api-contract.md) for current integration behavior.
+- [Backend documentation index](docs/README.md) for migrations and service references.
+- [Central documentation map](https://github.com/analyticalrx/analytical-rx-documentation/blob/main/documentation-map.md) for onboarding, shared AWS/database setup, and system designs.
+
+The [service design](https://github.com/analyticalrx/analytical-rx-documentation/blob/main/architecture/data-platform-service-design.md)
+is maintained centrally. Repository run instructions, implemented contracts, and
+service-specific migrations are maintained here alongside the code.
 
 The progress tracker is a September 3, 2026 snapshot, not a live status board.
 Use the current code, tests, and assigned GitHub issue to understand what is
