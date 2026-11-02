@@ -6,6 +6,8 @@ Status: Draft for backend implementation review
 
 Primary audience: backend, frontend, data engineering, and implementation leads
 
+> **Historical snapshot:** This tracker was created on September 3, 2026. The service has continued to evolve since then, so its progress table is not current. Use the code, tests, and live GitHub issues for present implementation status.
+
 ## 1. Purpose
 
 This document tracks how we will build the AnalyticalRx Phase 1 Data Platform Service as a Java 21 Spring Boot application backed by PostgreSQL.

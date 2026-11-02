@@ -1,9 +1,9 @@
 # AnalyticalRx Data Platform Service
 
-This repository contains the AnalyticalRx Data Platform Service design and will
-hold its implementation.
+This repository contains the AnalyticalRx Data Platform Service design and
+Spring Boot implementation.
 
-Initial plan:
+Technology and scope:
 
 - Java 21
 - Spring Boot 3.5.16
@@ -17,6 +17,10 @@ Start with:
 - [Data Platform Service Design](docs/data-platform-service-design.md)
 - [Spring Boot Data Platform Progress Tracker](docs/spring-boot-data-platform-progress.md)
 - [Applied bigint ID migration](database/bigint-id-migration-plan.md)
+
+The progress tracker is a September 3, 2026 snapshot, not a live status board.
+Use the current code, tests, and assigned GitHub issue to understand what is
+implemented and what is active.
 
 ## UI API contracts
 
@@ -33,217 +37,63 @@ repository.
 
 ## Local setup
 
-Requirements:
+Prerequisites: Java 21, AWS CLI access to the AnalyticalRx development account,
+and the AWS Session Manager Plugin. On Linux, install `jq` for the setup script.
+The included Maven wrapper downloads and runs the required Maven version; a
+separate Maven install is not needed.
 
-- Java 21
-- Maven 3.9+ (or the included Maven wrapper)
-- AWS CLI with access to the Phase 1 SSM instance and Secrets Manager
-- Session Manager plugin
-- `jq` (macOS/Linux only)
+Start the database tunnel in one terminal and leave it open. Follow the simple
+Windows or macOS/Linux steps in the [pgAdmin and database tunnel guide](https://github.com/analyticalrx/analytical-rx-documentation/blob/main/operations/teammate-rds-pgadmin-access-guide.md).
+The backend uses the same local tunnel on port `5433`.
 
-### Debug in VS Code (macOS/Linux)
+### Windows
 
-The Spring Boot Dashboard/Java debugger starts a new process; it does not read
-variables exported in a separate terminal. Its launch configuration uses the
-repository-root `.env` file, which is Git-ignored.
+1. Configure your own AWS CLI profile once. Use your personal AWS access keys:
 
-1. Start the SSM database tunnel in a terminal and keep it open. The command is
-   in [Start the SSM database tunnel](#2-start-the-ssm-database-tunnel).
-2. In the repository root, run `AWS_PROFILE=your-analyticalrx-profile bash scripts/setup-vscode-env.sh`.
-   The script checks the AWS account and retrieves the database and JWT secrets
-   into `.env` with owner-only permissions. If you use environment credentials
-   rather than a named profile, omit `AWS_PROFILE=...`. It will not overwrite an
-   existing `.env`.
-3. In VS Code, open this repository as the workspace. Select
-   `Spring Boot-DataplatformApplication<dataplatform>` in **Run and Debug** and
-   press F5, or debug the same project from Spring Boot Dashboard. Set a
-   breakpoint in `AuthController.login` and send a login request.
+   ```powershell
+   aws configure --profile my-analyticalrx
+   ```
 
-If the launch configuration is absent, add a Java launch configuration with
-`"mainClass": "com.analyticalrx.dataplatform.DataplatformApplication"` and
-`"envFile": "${workspaceFolder}/.env"`. `DB_JDBC_URL` uses local port 5433, so
-the SSM tunnel must still be running. Never commit `.env` or paste its secrets
-into `launch.json`.
+   Enter `us-east-1` for the default region. Do not use a teammate's keys.
+2. Open PowerShell in this repository and start the backend:
 
-### Windows Command Prompt setup
+   ```powershell
+   .\scripts\run-local.ps1 -Profile my-analyticalrx
+   ```
 
-Use two Command Prompt windows: Terminal 1 keeps the SSM database tunnel open;
-Terminal 2 retrieves secrets and starts Spring Boot. Do not close Terminal 1
-while the service is running.
+   If your AWS credentials are already the default profile, run
+   `.\scripts\run-local.ps1` instead.
 
-#### 1. Create a personal AWS CLI profile
+### Linux
 
-Each developer must configure their own IAM access key and secret access key.
-Do not share access keys or commit them to this repository.
+1. In this repository, create the local environment file from AWS secrets. Add
+   your profile name in place of `my-analyticalrx`:
 
-```cmd
-aws configure --profile your-analyticalrx-profile
-```
+   ```bash
+   AWS_PROFILE=my-analyticalrx bash scripts/setup-vscode-env.sh
+   ```
 
-Enter `us-east-1` as the default Region and `json` as the output format. For
-example, Vishnuvardhan's local profile is `vishnu-analyticalrx`.
+   The script checks the account, reads the database and JWT secrets, and writes
+   them to a private, Git-ignored `.env`. It will not overwrite an existing
+   `.env`. If you already have `.env`, skip this command. If you use default
+   AWS credentials, run `bash scripts/setup-vscode-env.sh` instead.
+2. In the same terminal, start the backend:
 
-Verify the profile before continuing:
+   ```bash
+   set -a
+   source .env
+   set +a
+   ./mvnw spring-boot:run
+   ```
 
-```cmd
-set "AWS_PROFILE=your-analyticalrx-profile"
-set "AWS_REGION=us-east-1"
-set "AWS_DEFAULT_REGION=us-east-1"
-set "AWS_PAGER="
-aws sts get-caller-identity --no-cli-pager
-```
+   Keep the database tunnel running in its other terminal. The `.env` file is
+   also used by the Java launch configuration if you add one in VS Code.
 
-The returned account ID must be `209556026827`.
+The backend is available at `http://127.0.0.1:8080`. Never commit `.env` or
+paste its values into source code, `launch.json`, or chat. The Windows script
+reads secrets into the running process without printing them.
 
-#### 2. Terminal 1: start the SSM database tunnel
-
-```cmd
-set "AWS_PROFILE=your-analyticalrx-profile"
-set "AWS_REGION=us-east-1"
-set "AWS_DEFAULT_REGION=us-east-1"
-set "AWS_PAGER="
-
-aws ssm start-session --region us-east-1 --target i-0ee64eae7d8505bfc --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters host=analytical-rx-phase1-rds-proxy.proxy-c6ry4mqo6ydb.us-east-1.rds.amazonaws.com,portNumber=5432,localPortNumber=5433
-```
-
-The tunnel maps `127.0.0.1:5433` to the RDS Proxy. It requires the AWS Session
-Manager plugin to be installed locally.
-
-#### 3. Terminal 2: retrieve secrets and run the service
-
-```cmd
-cd C:\path\to\data-platform
-
-set "AWS_PROFILE=your-analyticalrx-profile"
-set "AWS_REGION=us-east-1"
-set "AWS_DEFAULT_REGION=us-east-1"
-set "AWS_PAGER="
-
-set "DB_JDBC_URL=jdbc:postgresql://127.0.0.1:5433/analyticalrx?sslmode=require"
-
-for /f "delims=" %A in ('aws secretsmanager get-secret-value --region us-east-1 --secret-id analytical-rx/phase1/dev/postgres/data-platform-password-rw --query SecretString --output text --no-cli-pager') do set "DB_SECRET_JSON=%A"
-for /f "delims=" %A in ('powershell -NoProfile -Command "$s = ConvertFrom-Json -InputObject $env:DB_SECRET_JSON; [Console]::Write($s.username)"') do set "DB_USERNAME=%A"
-for /f "delims=" %A in ('powershell -NoProfile -Command "$s = ConvertFrom-Json -InputObject $env:DB_SECRET_JSON; [Console]::Write($s.password)"') do set "DB_PASSWORD=%A"
-set "DB_SECRET_JSON="
-
-for /f "delims=" %A in ('aws secretsmanager get-secret-value --region us-east-1 --secret-id analytical-rx/phase1/dev/jwt-signing-secret --query SecretString --output text --no-cli-pager') do set "JWT_SIGNING_SECRET=%A"
-
-set "JWT_ACCESS_TOKEN_TTL_MS=1800000"
-set "JWT_ISSUER=analyticalrx-api"
-set "JWT_AUDIENCE=analyticalrx-frontend"
-
-if defined DB_USERNAME (echo DB username loaded) else (echo DB username NOT loaded)
-if defined DB_PASSWORD (echo DB password loaded) else (echo DB password NOT loaded)
-if defined JWT_SIGNING_SECRET (echo JWT secret loaded) else (echo JWT secret NOT loaded)
-
-.\mvnw.cmd spring-boot:run
-```
-
-Values set with `set` exist only in the current Command Prompt window. The
-`for /f` commands use `%A` because they are pasted into Command Prompt; use
-`%%A` if placing the same commands in a `.cmd` file. Do not print or commit
-`DB_PASSWORD`, `JWT_SIGNING_SECRET`, or `DB_SECRET_JSON`.
-
-### 1. Retrieve the JWT secret
-
-The JWT signing secret is stored in AWS Secrets Manager under:
-
-```text
-analytical-rx/phase1/dev/jwt-signing-secret
-```
-
-The value is never committed to this repository.
-
-On Windows PowerShell:
-
-```powershell
-$env:JWT_SIGNING_SECRET = aws secretsmanager get-secret-value `
-  --region us-east-1 `
-  --secret-id analytical-rx/phase1/dev/jwt-signing-secret `
-  --query SecretString --output text
-```
-
-On macOS/Linux:
-
-```bash
-export JWT_SIGNING_SECRET="$(aws secretsmanager get-secret-value \
-  --region us-east-1 \
-  --secret-id analytical-rx/phase1/dev/jwt-signing-secret \
-  --query SecretString --output text)"
-```
-
-For deployed environments, inject this Secrets Manager value as the
-`JWT_SIGNING_SECRET` environment variable. Do not commit a real value to
-`.env`, source code, or documentation.
-
-### 2. Start the SSM database tunnel
-
-Keep this command running in a separate terminal:
-
-On Windows PowerShell:
-
-```powershell
-aws ssm start-session `
-  --region us-east-1 `
-  --target i-0ee64eae7d8505bfc `
-  --document-name AWS-StartPortForwardingSessionToRemoteHost `
-  --parameters '{"host":["analytical-rx-phase1-rds-proxy.proxy-c6ry4mqo6ydb.us-east-1.rds.amazonaws.com"],"portNumber":["5432"],"localPortNumber":["5433"]}'
-```
-
-On macOS/Linux:
-
-```bash
-aws ssm start-session \
-  --region us-east-1 \
-  --target i-0ee64eae7d8505bfc \
-  --document-name AWS-StartPortForwardingSessionToRemoteHost \
-  --parameters '{"host":["analytical-rx-phase1-rds-proxy.proxy-c6ry4mqo6ydb.us-east-1.rds.amazonaws.com"],"portNumber":["5432"],"localPortNumber":["5433"]}'
-```
-
-The tunnel maps `127.0.0.1:5433` to the password-authenticated RDS Proxy.
-
-### 3. Configure database credentials and run
-
-The password-authenticated database credentials are stored in:
-
-```text
-analytical-rx/phase1/dev/postgres/data-platform-password-rw
-```
-
-On Windows PowerShell (Java 21 must be on `PATH`):
-
-```powershell
-$env:DB_JDBC_URL = 'jdbc:postgresql://127.0.0.1:5433/analyticalrx?sslmode=require'
-$dbSecret = aws secretsmanager get-secret-value `
-  --region us-east-1 `
-  --secret-id analytical-rx/phase1/dev/postgres/data-platform-password-rw `
-  --query SecretString --output text | ConvertFrom-Json
-$env:DB_USERNAME = $dbSecret.username
-$env:DB_PASSWORD = $dbSecret.password
-
-mvn spring-boot:run
-```
-
-On macOS/Linux:
-
-```bash
-export DB_JDBC_URL='jdbc:postgresql://127.0.0.1:5433/analyticalrx?sslmode=require'
-DB_SECRET_JSON="$(aws secretsmanager get-secret-value \
-  --region us-east-1 \
-  --secret-id analytical-rx/phase1/dev/postgres/data-platform-password-rw \
-  --query SecretString --output text)"
-export DB_USERNAME="$(printf '%s' "$DB_SECRET_JSON" | jq -r .username)"
-export DB_PASSWORD="$(printf '%s' "$DB_SECRET_JSON" | jq -r .password)"
-
-export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
-export PATH="$JAVA_HOME/bin:$PATH"
-
-mvn spring-boot:run
-```
-
-The service starts on `http://127.0.0.1:8080`.
-
-### 4. Test login
+### Test login
 
 ```bash
 curl -i -X POST http://127.0.0.1:8080/api/v1/auth/login \
@@ -251,7 +101,7 @@ curl -i -X POST http://127.0.0.1:8080/api/v1/auth/login \
   -d '{"tenantKey":"<tenant-key>","email":"<user-email>","password":"<password>"}'
 ```
 
-### 5. Test pharmacy access
+### Test pharmacy access
 
 Use the bearer token returned by login to list active pharmacies within the
 user's scope, then fetch one by its `pharmacy_key`:
@@ -276,7 +126,7 @@ These endpoints return pharmacy metadata only. Pharmacy scope does not grant
 access to operational, financial, or patient data: each future dashboard or
 workflow API must also check the caller's permission for that content.
 
-### 6. Task management
+### Task management
 
 Apply `database/manual-migrations/2026-10-03-task-management.sql` as a database
 admin before using task APIs. This migration targets the dev tenant schema and
