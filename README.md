@@ -43,60 +43,95 @@ repository.
 ## Local setup
 
 Prerequisites: Java 21, AWS CLI access to the AnalyticalRx development account,
-and the AWS Session Manager Plugin. On Linux, install `jq` for the setup script.
+and the AWS Session Manager Plugin. On macOS or Linux, install `jq` for the setup script.
 The included Maven wrapper downloads and runs the required Maven version; a
 separate Maven install is not needed.
 
-Start the database tunnel in one terminal and leave it open. Follow the simple
-Windows or macOS/Linux steps in the [pgAdmin and database tunnel guide](https://github.com/analyticalrx/analytical-rx-documentation/blob/main/operations/teammate-rds-pgadmin-access-guide.md).
-The backend uses the same local tunnel on port `5433`.
+Run both the tunnel and the backend from this repository. The tunnel forwards
+local port `5433` to private RDS through SSM. The sole RDS Proxy serves the
+webhook processor Lambda.
 
-### Windows
+### Configure AWS access once
 
-1. Configure your own AWS CLI profile once. Use your personal AWS access keys:
+Use a personal IAM identity with permission to open the development SSM tunnel
+and read the database and JWT development secrets. If you already have a
+configured personal profile, use its name in the steps below. Otherwise,
+configure one with your own approved credentials and choose `us-east-1` as the
+default region.
 
-   ```powershell
-   aws configure --profile my-analyticalrx
-   ```
+```text
+aws configure --profile my-analyticalrx
+aws sts get-caller-identity --profile my-analyticalrx --region us-east-1
+```
 
-   Enter `us-east-1` for the default region. Do not use a teammate's keys.
-2. Open PowerShell in this repository and start the backend:
+Check that the account is `209556026827` and the ARN is your IAM user or role.
+If your personal profile is named `default`, use `default` as the profile name
+in the commands below.
 
-   ```powershell
-   .\scripts\run-local.ps1 -Profile my-analyticalrx
-   ```
+### Windows and the VS Code terminal
 
-   If your AWS credentials are already the default profile, run
-   `.\scripts\run-local.ps1` instead.
+Open two terminals in `data-platform`. In VS Code, choose the commands for the
+shell shown in the terminal tab. Leave the first terminal open while Spring Boot runs.
 
-### Linux
+**PowerShell, terminal 1**
 
-1. In this repository, create the local environment file from AWS secrets. Add
-   your profile name in place of `my-analyticalrx`:
+```powershell
+.\scripts\start-db-tunnel.ps1 -Profile my-analyticalrx
+```
 
-   ```bash
-   AWS_PROFILE=my-analyticalrx bash scripts/setup-vscode-env.sh
-   ```
+**PowerShell, terminal 2**
 
-   The script checks the account, reads the database and JWT secrets, and writes
-   them to a private, Git-ignored `.env`. It will not overwrite an existing
-   `.env`. If you already have `.env`, skip this command. If you use default
-   AWS credentials, run `bash scripts/setup-vscode-env.sh` instead.
-2. In the same terminal, start the backend:
+```powershell
+.\scripts\run-local.ps1 -Profile my-analyticalrx
+```
 
-   ```bash
-   set -a
-   source .env
-   set +a
-   ./mvnw spring-boot:run
-   ```
+**Command Prompt, terminal 1**
 
-   Keep the database tunnel running in its other terminal. The `.env` file is
-   also used by the Java launch configuration if you add one in VS Code.
+```bat
+.\scripts\start-db-tunnel.cmd -Profile my-analyticalrx
+```
 
-The backend is available at `http://127.0.0.1:8080`. Never commit `.env` or
-paste its values into source code, `launch.json`, or chat. The Windows script
-reads secrets into the running process without printing them.
+**Command Prompt, terminal 2**
+
+```bat
+.\scripts\run-local.cmd -Profile my-analyticalrx
+```
+
+The backend launcher fetches the database and JWT secrets, then runs Spring
+Boot through Maven. If `5433` is in use, add `-LocalPort 5434` to both commands.
+You can also use the `.cmd` launchers from PowerShell if script policy blocks
+the direct `.ps1` invocations.
+
+### macOS or Linux
+
+In terminal 1, open the tunnel and leave it running:
+
+```bash
+bash scripts/start-db-tunnel.sh --profile my-analyticalrx
+```
+
+In terminal 2, start the backend:
+
+```bash
+bash scripts/run-local.sh --profile my-analyticalrx
+```
+
+On the first run, the launcher fetches the development secrets and writes an
+owner-only, Git-ignored `.env`. Later runs use that file. If `5433` is in use,
+pass `5434` after the profile name in the tunnel command. Set that port in
+`DB_JDBC_URL` in your backend `.env` before starting Spring Boot. To generate
+the `.env` for a VS Code Java launch configuration by itself, run
+`bash scripts/setup-vscode-env.sh --profile my-analyticalrx`.
+
+### Check that the backend started
+
+Open `http://127.0.0.1:8080/actuator/health` and check for `UP`. If the
+tunnel fails, check that the Session Manager Plugin is installed and that
+your IAM identity has access. The shared database and tunnel host must be
+running. If the backend cannot reach PostgreSQL, check that the tunnel
+terminal is still open and that the port matches.
+
+Keep `.env` and its values out of Git, source files, `launch.json`, and chat.
 
 ### Test login
 
