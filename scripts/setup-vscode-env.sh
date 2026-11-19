@@ -4,6 +4,16 @@ set -euo pipefail
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 env_file="$root_dir/.env"
 
+region=us-east-1
+aws_options=(--region "$region")
+if [[ $# -ne 0 ]]; then
+  if [[ $# -ne 2 || "$1" != "--profile" || -z "${2:-}" ]]; then
+    echo "Usage: $0 [--profile PROFILE]" >&2
+    exit 1
+  fi
+  aws_options+=(--profile "$2")
+fi
+
 if [[ -e "$env_file" ]]; then
   echo "Refusing to replace existing $env_file" >&2
   exit 1
@@ -16,21 +26,23 @@ for command in aws jq; do
   fi
 done
 
-region=us-east-1
-account="$(aws sts get-caller-identity --region "$region" --query Account --output text)"
+identity="$(aws "${aws_options[@]}" sts get-caller-identity --query '[Account,Arn]' --output text)"
+read -r account arn <<< "$identity"
 if [[ "$account" != 209556026827 ]]; then
   echo "Expected AWS account 209556026827, got $account" >&2
   exit 1
 fi
+if [[ "$arn" == *:root ]]; then
+  echo "Configure a personal development IAM profile to set up the backend." >&2
+  exit 1
+fi
 
-db_secret="$(aws secretsmanager get-secret-value \
-  --region "$region" \
+db_secret="$(aws "${aws_options[@]}" secretsmanager get-secret-value \
   --secret-id analytical-rx/phase1/dev/postgres/data-platform-password-rw \
   --query SecretString --output text)"
 db_username="$(jq -er '.username' <<< "$db_secret")"
 db_password="$(jq -er '.password' <<< "$db_secret")"
-jwt_secret="$(aws secretsmanager get-secret-value \
-  --region "$region" \
+jwt_secret="$(aws "${aws_options[@]}" secretsmanager get-secret-value \
   --secret-id analytical-rx/phase1/dev/jwt-signing-secret \
   --query SecretString --output text)"
 
