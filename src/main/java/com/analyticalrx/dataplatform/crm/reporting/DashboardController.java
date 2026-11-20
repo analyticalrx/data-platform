@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 
-@RestController
+@RestController("crmDashboardController")
 @RequestMapping("/api/v1/dashboard")
 public class DashboardController {
 
