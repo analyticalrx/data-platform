@@ -40,6 +40,26 @@ Product requirements, database design, and RBAC standards remain in the private
 [`analytical-rx-documentation`](https://github.com/analyticalrx/analytical-rx-documentation)
 repository.
 
+## Report upload processing
+
+After S3 confirms the upload, the API inserts a receipt into
+`control_plane.upload_receipt` with a `BIGINT` primary key named `upload_id` and
+status `SAVED`. Set the status explicitly
+because the table default is `QUEUED`.
+
+The Data Platform scheduler picks one `SAVED` receipt per poll. It uses the
+receipt's report type to select a workflow and opens the file by its exact
+S3 object key. PostgreSQL locks the receipt while the workflow runs. The report
+rows, row count, and `PROCESSED` status commit together. Invalid reports get
+`FAILED` and a safe error. On a temporary failure, the transaction rolls back,
+the receipt stays `SAVED`, and it becomes eligible for retry after ten seconds.
+
+To run the scheduler, register at least one `ReportUploadWorkflow` and set
+`app.report-uploads.enabled=true` and `app.report-uploads.bucket`. The optional
+`app.report-uploads.poll-delay` defaults to `5s`. Configure the AWS region and
+credentials through the standard SDK settings. The service needs read and
+update access to the receipt table and read access to the uploaded S3 objects.
+
 ## Local setup
 
 Prerequisites: Java 21, AWS CLI access to the AnalyticalRx development account,
