@@ -44,18 +44,24 @@ final class UploadReceiptRepository {
         String sql = """
                 update control_plane.upload_receipt
                 set status = 'PROCESSED', committed_row_count = ?, safe_error = null, updated_at = clock_timestamp()
-                where upload_id = ?
+                where upload_id = ? and status = 'SAVED'
                 """;
-        jdbc.update(sql, rowCount, uploadId);
+        int updatedRows = jdbc.update(sql, rowCount, uploadId);
+        if (updatedRows != 1) {
+            throw new IllegalStateException("Could not mark saved upload " + uploadId + " as processed");
+        }
     }
 
     void markFailed(long uploadId, ReportUploadResult.ErrorCode errorCode) {
         String sql = """
                 update control_plane.upload_receipt
                 set status = 'FAILED', committed_row_count = null, safe_error = ?, updated_at = clock_timestamp()
-                where upload_id = ?
+                where upload_id = ? and status = 'SAVED'
                 """;
-        jdbc.update(sql, errorCode.name(), uploadId);
+        int updatedRows = jdbc.update(sql, errorCode.name(), uploadId);
+        if (updatedRows != 1) {
+            throw new IllegalStateException("Could not mark saved upload " + uploadId + " as failed");
+        }
     }
 
     void deferRetry(long uploadId) {
