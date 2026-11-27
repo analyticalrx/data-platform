@@ -49,23 +49,42 @@ final class ReportUploadScheduler {
 
     @Scheduled(fixedDelayString = "${app.report-uploads.poll-delay:5s}", scheduler = "reportUploadTaskScheduler")
     void poll() {
+        UploadAttempt attempt = new UploadAttempt();
+        Optional<Long> receiptToRetry;
+
         try {
-            Optional<Long> receiptToRetry = transaction.execute(this::processNextReceipt);
-            if (receiptToRetry.isPresent()) {
-                receipts.deferRetry(receiptToRetry.get());
-            }
+            receiptToRetry = transaction.execute(status -> processNextReceipt(status, attempt));
         } catch (RuntimeException failure) {
-            log.warn("Could not poll report upload receipts ({})", failure.getClass().getSimpleName());
+            if (attempt.uploadId == null) {
+                log.warn("Could not poll report upload receipts ({})", failure.getClass().getSimpleName());
+                return;
+            }
+
+            // A database constraint can fail when Spring commits, after the workflow returns.
+            log.warn("Could not finish the transaction for report upload {} ({})",
+                    attempt.uploadId, failure.getClass().getSimpleName());
+            receiptToRetry = Optional.of(attempt.uploadId);
+        }
+
+        if (receiptToRetry.isPresent()) {
+            long uploadId = receiptToRetry.get();
+            try {
+                receipts.deferRetry(uploadId);
+            } catch (RuntimeException failure) {
+                log.warn("Could not defer retry for report upload {} ({})",
+                        uploadId, failure.getClass().getSimpleName());
+            }
         }
     }
 
-    private Optional<Long> processNextReceipt(TransactionStatus status) {
+    private Optional<Long> processNextReceipt(TransactionStatus status, UploadAttempt attempt) {
         Optional<UploadReceipt> next = receipts.lockNextSavedReceipt();
         if (next.isEmpty()) {
             return Optional.empty();
         }
 
         UploadReceipt receipt = next.get();
+        attempt.uploadId = receipt.uploadId();
         ReportUploadWorkflow workflow = workflowsByReportType.get(receipt.reportType());
         if (workflow == null) {
             log.warn("No report workflow registered for upload {}", receipt.uploadId());
@@ -101,5 +120,9 @@ final class ReportUploadScheduler {
             case ReportUploadResult.Rejected rejected ->
                     receipts.markFailed(receipt.uploadId(), rejected.errorCode());
         }
+    }
+
+    private static final class UploadAttempt {
+        private Long uploadId;
     }
 }
